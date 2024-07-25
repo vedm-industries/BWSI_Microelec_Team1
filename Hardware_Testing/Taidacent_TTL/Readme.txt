@@ -6,6 +6,9 @@ NOTES:
   will drop with more time though. 
 - I'm pretty sure that mine works because I stuck the sensor on top of an acetone bottle and the readings spiked up
 
-INDOOR ROOM VOLTAGE LEVEL:
+INDOOR ROOM VOLTAGE LEVEL | RAW :
+Shriya (7/25/24) - 1.88V | 384
 
-OUTDOOR ROOM VOLTAGE LEVEL:
+
+OUTDOOR ROOM VOLTAGE LEVEL | RAW:
+Shriya (7/25/24) - 1.37V | 281
