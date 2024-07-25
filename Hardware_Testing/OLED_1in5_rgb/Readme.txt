@@ -12,9 +12,9 @@ SPI:
 
 IMPORTANT(ish) NOTES!!
 - Baud is set by System_Init(); at the beginning of the sketch, so make sure your serial monitor is at 115200
-- Paint_DrawString_EN(); is a weird func it doesn't take allow you to put in strings, so I just made a variable
-	cPtr that pointed to a character array (which I updated by iterating over it). Is it the best solution? 
-	No. If someone understands cpp better pls fix the code in OLED_attempt_1.ino ;-;
+- Paint_DrawString_EN(); is a weird func it doesn't take allow you to put in strings (ex: if you wanted to take
+	a sensor reading and convert it into a string so it could be displayed, so I just made a function to take 
+	care of it. Is it the best solution? No. If someone understands cpp better pls fix the code in OLED_attempt_1.ino ;-;
 - For some reason you can't have two .ino files in the folder when you run it, so if you have multiple, just 
 	comment out one file entirely
 - Currently there is an animation that writes out and erases lines/images/whatever is on screen at the moment.
