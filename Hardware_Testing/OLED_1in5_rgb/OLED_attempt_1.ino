@@ -4,9 +4,40 @@
 #include "Debug.h"
 #include "ImageData.h"
 
-char message[20] = "Hello, World!"; // Allocate enough space for "Hello, World!" and modifications
+char message[20] = "Hello, World!"; // Message is super long so there are extra character spaces 
 char* cPtr = message; // Pointer to the message array
 
+/* 
+RANDOM INFORMATION:
+So I guess if you wanted to make a line that was able to be updated, you would
+have to establish the base text up here first with something like:
+  char informationLabel[20] = "BaseLabel:";
+  char* informationLabelPtr = informationLabel;
+
+Then later when calling Paint_DrawString_EN() do something like this:
+  Paint_DrawString_EN(x position, y position, informationLabelPtr, font, foregroundColor, backgroundColor);
+
+And THEN if you want to update the text call updateText()
+
+slap in updateText("whatever your message is", informationLabelPtr);
+
+I guarantee you this method is over-engineered and there is a simpler way to do it. I just don't know how lol.
+*/
+
+// I made and updateText function so its less horrific to change contents of a line
+void updateText (String yourMessage, char* yourPtr) {
+  int len = yourMessage.length();
+  char newMessage[len + 1];
+  yourMessage.toCharArray(newMessage, len + 1);
+  Serial.println(newMessage);
+  int i;
+  for (i = 0; i < sizeof(newMessage); i++) {
+        yourPtr[i] = newMessage[i];
+    }
+    yourPtr[i] = '\0';
+}
+
+//Setup area 
 void setup() {
     Serial.println("Starting program..."); // Print a test message
 
@@ -30,26 +61,16 @@ void setup() {
 
 void loop() {
     //2. Write directly to memory through the GUI 
-    Serial.println("Drawing: page 3");     
+    Serial.println("Drawing: page 1");     
     Paint_DrawString_EN(10, 0, cPtr, &Font16, BLACK, BLUE);
     Paint_DrawNum(10, 30, "123.4567", &Font12, 2, RED, BLACK); 
     Paint_DrawString_CN(10, 50, "你好Ab", &Font12CN, BLACK, BROWN);
     Paint_DrawString_CN(0, 80, "微雪电子", &Font24CN, BLACK, BRED);
-    Driver_Delay_ms(2000);    
+    Driver_Delay_ms(50);  
+    delay(2000); // Add delay for readability  
     OLED_1in5_rgb_Clear(); 
-    Serial.println("WHAT");  
-
-    // Modify the string
-    cPtr[7] = 'K';
-
-    // Copy new string into cPtr, ensuring not to exceed the array bounds
-    char newMessage[] = "yooo";
-    int i;
-    for (i = 0; i < sizeof(newMessage); i++) {
-        cPtr[i] = newMessage[i];
-    }
-    // Ensure null-termination
-    cPtr[i] = '\0';
+  
     Serial.println("main loop");
-    delay(2000); // Add delay for readability
+    updateText("Goodbye, world :O", cPtr);
+    
 }
