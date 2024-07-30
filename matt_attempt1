@@ -1,0 +1,114 @@
+#include "Air_Quality_Sensor.h"
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
+
+#define SEALEVELPRESSURE_HPA (1013.25)
+#define Aout A0
+#define Dout 2
+
+int pin = 8;
+int sensorValue;
+int digitalValue;
+unsigned long duration;
+unsigned long starttime;
+unsigned long sampletime_ms = 2000; 
+unsigned long lowpulseoccupancy = 0;
+float ratio = 0;
+float concentration = 0;
+
+AirQualitySensor sensor(A0);
+Adafruit_BME280 bme;
+
+void setup() {
+    pinMode(8,INPUT);
+    pinMode(Aout,INPUT);
+   pinMode(Dout,INPUT);
+    pinMode(13, OUTPUT);
+   pinMode(8, INPUT);
+   starttime = millis(); 
+   Serial.begin(9600);
+    while (!Serial);
+
+	if (!bme.begin(0x76)) {
+		Serial.println("Could not find a valid BME280 sensor, check wiring!");
+		while (1);
+  }
+
+    Serial.println("Waiting sensor to init...");
+    delay(20000);
+
+    if (sensor.init()) {
+        Serial.println("Sensor ready.");
+    } else {
+        Serial.println("Sensor ERROR!");
+    }
+}
+
+void loop(void) {
+    int quality = sensor.slope();
+///////////////////////////////////////////////////////////// Grove Air Quality Sensor
+    Serial.print("Sensor value: ");
+    Serial.println(sensor.getValue());
+
+    if (quality == AirQualitySensor::FORCE_SIGNAL) {
+        Serial.println("High pollution! Force signal active.");
+    } else if (quality == AirQualitySensor::HIGH_POLLUTION) {
+        Serial.println("High pollution!");
+    } else if (quality == AirQualitySensor::LOW_POLLUTION) {
+        Serial.println("Low pollution!");
+    } else if (quality == AirQualitySensor::FRESH_AIR) {
+        Serial.println("Fresh air.");
+    }
+///////////////////////////////////////////////////////////// Grove Dust Sensor
+    duration = pulseIn(pin, LOW);
+    lowpulseoccupancy = lowpulseoccupancy+duration;
+    if ((millis()-starttime) >= sampletime_ms) //if the sampel time = = 30s
+    {
+    ratio = lowpulseoccupancy/(sampletime_ms*10.0);  
+    concentration = 1.1*pow(ratio,3)-3.8*pow(ratio,2)+520*ratio+0.62; 
+    Serial.print("Concentration = ");
+    Serial.print(concentration);
+    Serial.println(" pcs/0.01cf");
+    Serial.println("\n");
+    lowpulseoccupancy = 0;
+    starttime = millis();
+///////////////////////////////////////////////////////////// MS1100
+     int a=analogRead(Aout);
+     int b=digitalRead(Dout);
+     Serial.print("D0:");
+     Serial.print(b);
+     Serial.print("   A0:");
+     Serial.println(a);
+///////////////////////////////////////////////////////////// MQ - 135
+  sensorValue = analogRead(0); // read analog input pin 0
+  digitalValue = digitalRead(2);
+  if (sensorValue > 400)
+  {
+    digitalWrite(13, HIGH);
+  }
+  else
+    digitalWrite(13, LOW);
+  Serial.println(sensorValue, DEC); // prints the value read
+  Serial.println(digitalValue, DEC);
+///////////////////////////////////////////////////////////// BME280
+	Serial.print("Temperature = ");
+	Serial.print(bme.readTemperature());
+	Serial.println("*C");
+
+	Serial.print("Pressure = ");
+	Serial.print(bme.readPressure() / 100.0F);
+	Serial.println("hPa");
+
+	Serial.print("Approx. Altitude = ");
+	Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
+	Serial.println("m");
+
+	Serial.print("Humidity = ");
+	Serial.print(bme.readHumidity());
+	Serial.println("%");
+
+  Serial.println();
+}
+delay(5000);
+}
