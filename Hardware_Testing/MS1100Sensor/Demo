@@ -1,0 +1,22 @@
+#define Aout A0
+#define Dout 2
+
+void setup() 
+{
+  // put your setup code here, to run once:
+  Serial.begin(9600);
+  pinMode(Aout,INPUT);
+  pinMode(Dout,INPUT);
+}
+
+void loop() 
+{
+  // put your main code here, to run repeatedly:
+  int a=analogRead(Aout);
+  int b=digitalRead(Dout);
+  Serial.print("D0:");
+  Serial.print(b);
+  Serial.print("   A0:");
+  Serial.println(a);
+  delay(500);
+}
