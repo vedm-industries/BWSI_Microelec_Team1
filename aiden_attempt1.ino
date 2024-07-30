@@ -7,9 +7,9 @@
 #include "Adafruit_Sensor.h"
 #include "Adafruit_BME280.h"
 #include "SoftwareSerial.h"
+#include "Adafruit_PM25AQI.h"
 #include "Air_Quality_Sensor.h"
 #define SEALEVELPRESSURE_HPA (1013.25)
-SoftwareSerial pmsSerial(2,3);
 Adafruit_BME280 bme; // I2C
 char message[20] = ""; // Message is super long so there are extra character spaces 
 char* cPtr = message; // Pointer to the message array
@@ -25,6 +25,8 @@ float humid;
 float AQ;
 bool status;
 AirQualitySensor sensor(A2);
+Adafruit_PM25AQI aqi = Adafruit_PM25AQI();
+SoftwareSerial pmSerial(2,3);
 /* 
 RANDOM INFORMATION:
 So I guess if you wanted to make a line that was able to be updated, you would
@@ -57,7 +59,7 @@ void updateText (String yourMessage, char* yourPtr) {
 //Setup area 
 void setup() {
   Serial.begin(9600);
-  pmsSerial.begin(9600);
+  pmSerial.begin(9600);
   Serial.println("Starting program..."); // Print a test message
   System_Init();
 
@@ -73,40 +75,45 @@ void setup() {
   if (!status) {
     Serial.println("Could not find a valid BME280 sensor, check wiring!");
   }
+
+  if (! aqi.begin_UART(&pmSerial)) { // connect to the sensor over software serial 
+    Serial.println("Could not find PM 2.5 sensor!");
+    while (1) delay(10);
+  }
+
+  Serial.println("PM25 found!");
 }
 
-struct pms5003data {
-  uint16_t framelen;
-  uint16_t pm10_standard, pm25_standard, pm100_standard;
-  uint16_t pm10_env, pm25_env, pm100_env;
-  uint16_t particles_03um, particles_05um, particles_10um, particles_25um, particles_50um, particles_100um;
-  uint16_t unused;
-  uint16_t checksum;
-};
-struct pms5003data data;
-
 void loop() {
+  PM25_AQI_Data data;
+  if (! aqi.read(&data)) {
+    Serial.println("Could not read from AQI");
+    delay(500);  // try again in a bit!
+    return;
+  }
+  Serial.println("AQI reading success");
+  int quality = sensor.slope();
+  Serial.print("Particles > 10.0 um / 0.1L air:"); Serial.println(data.particles_03um);
   MQReading = analogRead(MQPin)*5.0/1024;
   taiReading = analogRead(taiPin)*5.0/1024;
   humid = bme.readHumidity();
   AQ = sensor.getValue();
-  updateText("Taicident:" + String(taiReading), cPtr);
+  updateText("Tai:" + String(taiReading), cPtr);
   Paint_DrawString_EN(10, 0, cPtr, &Font16, BLACK, BLUE);
   updateText("MQ135:" + String(MQReading), cPtr);
-  Paint_DrawString_EN(10, 30, cPtr, &Font16, BLACK, BLUE);
+  Paint_DrawString_EN(10, 15, cPtr, &Font16, BLACK, BLUE);
   updateText("PMS:", cPtr);
-  Paint_DrawString_EN(10, 45, cPtr, &Font16, BLACK, BLUE);
+  Paint_DrawString_EN(10, 30, cPtr, &Font16, BLACK, BLUE);
   updateText(String(data.particles_03um), cPtr);
-  Paint_DrawString_EN(10, 60, cPtr, &Font12, BLACK, BLUE);
+  Paint_DrawString_EN(10, 45, cPtr, &Font12, BLACK, BLUE);
   updateText(String(data.particles_05um), cPtr);
-  Paint_DrawString_EN(45, 60, cPtr, &Font12, BLACK, BLUE);
+  Paint_DrawString_EN(45, 45, cPtr, &Font12, BLACK, BLUE);
   updateText(String(data.particles_10um), cPtr);
-  Paint_DrawString_EN(80, 60, cPtr, &Font12, BLACK, BLUE);
+  Paint_DrawString_EN(80, 45, cPtr, &Font12, BLACK, BLUE);
   updateText("BME:" + String(humid), cPtr);
+  Paint_DrawString_EN(10, 60, cPtr, &Font16, BLACK, BLUE);
+  updateText("AQ:" + String(AQ), cPtr);
   Paint_DrawString_EN(10, 75, cPtr, &Font16, BLACK, BLUE);
-  updateText("Grove:" + String(AQ), cPtr);
-  Paint_DrawString_EN(10, 90, cPtr, &Font16, BLACK, BLUE);
   delay(2500); // Add delay for readability  
   OLED_1in5_rgb_Clear(); 
-  
 }
