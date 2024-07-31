@@ -40,13 +40,13 @@ void updateText (String yourMessage, char* yourPtr) {
 
 int getTextColor (float yourIndex) {
   if (yourIndex > 1.9) {
-        return BROWN;
+        return RED;
     } else if (yourIndex < 1.2) {
         return GREEN;
     } else if (yourIndex < 1.4) {
         return YELLOW;
     } else if (yourIndex < 1.9) {
-        return RED;
+        return BROWN;
     } else {
       return GRAY;
     }
@@ -94,8 +94,9 @@ const int MQ_input = A2;
 const int taidacent_baseline = 210;
 const int MQ_baseline = 280;
   //DEVMO PMS5003 baselines:
-    int particles_03um_baseline = 500;
-    int particles_05um_baseline = 430;
+    int particles_03um_baseline = 430;
+    int particles_05um_baseline = 350;
+const int humidity_baseline = 50;
 // Where to store the particlces info for PMS5003
     float particles_03um = 0;
     float particles_05um = 0;
@@ -119,7 +120,6 @@ void setup() {
     pmsSerial.begin(9600);
 
   Serial.println(F("Waiting sensor to init..."));
-    delay(1000);
   //Checking if Grove Air Quality Sensor is ready
     if (sensor.init()) {
         Serial.println("Grove Air Quality sensor ready.");
@@ -176,8 +176,9 @@ void loop() {
   
   // DEVMO PMS5003
       if (readPMSdata(&pmsSerial)) {
-    particles_03um = data.particles_03um;
-    particles_05um = data.particles_05um;
+        particles_03um = data.particles_03um;
+        particles_05um = data.particles_05um;
+        Serial.println("inside if:" + String(particles_03um));
     }
 
   //BME280 Pressure/temp/humidity
@@ -191,11 +192,13 @@ void loop() {
     float taidacent_risk = (taidacent_reading/taidacent_baseline);
     float MQ_risk = (MQ_reading/MQ_baseline);
 
-    float total_risk = (pms5003_risk+grove_AQ_risk+taidacent_risk+MQ_risk)/4;
+    float humidity_risk = (humidity/humidity_baseline);
 
-    // determine which category 
-    Serial.println("---------------------------------------");
-    Serial.print("Risk Type: ");
+    float total_risk = (pms5003_risk+grove_AQ_risk+taidacent_risk+MQ_risk+humidity_risk)/5;
+
+    // // determine which category 
+    // Serial.println("---------------------------------------");
+    // Serial.print("Risk Type: ");
     
 
     if (total_risk < 1.2) {
@@ -208,16 +211,17 @@ void loop() {
       Serial.println("Dangerous!!");
     };
 
-    Serial.println("----------------");
-    Serial.println("Risk index PMS: " + String(pms5003_risk));
-    Serial.println("Risk index Grove AQ: " + String(grove_AQ_risk));
-    Serial.println("Risk index Taidacent: " + String(taidacent_risk));
-    Serial.println("Risk index MQ-135: " + String(MQ_risk));
-    Serial.println("----------------");
-    Serial.println("Risk index total: " + String(total_risk));
-    Serial.println("Humidity: " + String(humidity) + "%");
-    Serial.println("---------------------------------------");
+    // Serial.println("----------------");
+    // Serial.println("Risk index PMS: " + String(pms5003_risk));
+    // Serial.println("Risk index Grove AQ: " + String(grove_AQ_risk));
+    // Serial.println("Risk index Taidacent: " + String(taidacent_risk));
+    // Serial.println("Risk index MQ-135: " + String(MQ_risk));
+    // Serial.println("----------------");
+    // Serial.println("Risk index total: " + String(total_risk));
+    // Serial.println("Humidity: " + String(humidity) + "%");
+    // Serial.println("---------------------------------------");
 
+    Serial.println("Debug nation over here:" + String(humidity));
 
     //OLED Display code: 
         updateText("PMS5003:" + String(pms5003_risk), cPtr);
@@ -226,14 +230,14 @@ void loop() {
         Paint_DrawString_EN(10, 15, cPtr, &Font8, BLACK, getTextColor(grove_AQ_risk));
         updateText("Taidacent:" + String(taidacent_risk), cPtr);
         Paint_DrawString_EN(10, 30, cPtr, &Font8, BLACK, getTextColor(taidacent_risk));
-        updateText("MQ-135:" + String(MQ_risk) + "why isn;t the risk number printing D:", cPtr);
+        updateText("MQ-135:" + String(MQ_risk), cPtr);
         Paint_DrawString_EN(10, 45, cPtr, &Font8, BLACK, getTextColor(MQ_risk));
-        updateText("----------------", cPtr);
-        Paint_DrawString_EN(45, 45, cPtr, &Font8, BLACK, GRAY);
         updateText("Humidity: " + String(humidity) + "%", cPtr);
-        Paint_DrawString_EN(10, 60, cPtr, &Font8, BLACK, GRAY);
+        Paint_DrawString_EN(10, 60, cPtr, &Font8, BLACK, getTextColor(humidity_risk));
+        updateText("----------------", cPtr);
+        Paint_DrawString_EN(10, 75, cPtr, &Font8, BLACK, GRAY);
         updateText("Total risk index:" + String(total_risk), cPtr);
-        Paint_DrawString_EN(10, 75, cPtr, &Font8, BLACK, getTextColor(total_risk));
+        Paint_DrawString_EN(10, 90, cPtr, &Font8, BLACK, getTextColor(total_risk));
         delay(2500); // Add delay for readability  
         OLED_1in5_rgb_Clear();   
      
