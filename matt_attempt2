@@ -1,0 +1,145 @@
+#include "OLED_Driver.h"
+#include "GUI_paint.h"
+#include "DEV_Config.h"
+#include "Debug.h"
+#include "ImageData.h"
+#include "Air_Quality_Sensor.h"
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
+
+#define SEALEVELPRESSURE_HPA (1013.25)
+#define Aout A0
+#define Dout 2
+
+int pin = 8;
+unsigned long duration;
+unsigned long starttime;
+unsigned long sampletime_ms = 2000;
+unsigned long lowpulseoccupancy = 0;
+float ratio = 0;
+float concentration = 0;
+
+AirQualitySensor sensor(A0);
+Adafruit_BME280 bme;
+
+// OLED message buffers
+char message[20] = "";
+char* cPtr = message;
+
+void updateText(String yourMessage, char* yourPtr) {
+    int len = yourMessage.length();
+    char newMessage[len + 1];
+    yourMessage.toCharArray(newMessage, len + 1);
+    int i;
+    for (i = 0; i < sizeof(newMessage); i++) {
+        yourPtr[i] = newMessage[i];
+    }
+    yourPtr[i] = '\0';
+}
+
+int getTextColor(float yourIndex) {
+    if (yourIndex > 1.9) {
+        return RED;
+    } else if (yourIndex < 1.2) {
+        return GREEN;
+    } else if (yourIndex < 1.4) {
+        return YELLOW;
+    } else if (yourIndex < 1.9) {
+        return BROWN;
+    } else {
+        return GRAY;
+    }
+}
+
+void setup() {
+    Serial.begin(9600);
+    pinMode(8, INPUT);
+    pinMode(Aout, INPUT);
+    pinMode(Dout, INPUT);
+    pinMode(13, OUTPUT);
+    starttime = millis();
+
+    System_Init();
+    if (USE_IIC) {
+        return;
+    }
+
+    OLED_1in5_rgb_Init();
+    Driver_Delay_ms(500);
+    OLED_1in5_rgb_Clear();
+
+    // Create a new image size
+    UBYTE* BlackImage;
+    Paint_NewImage(BlackImage, OLED_1in5_RGB_WIDTH, OLED_1in5_RGB_HEIGHT, 270, BLACK);
+    Paint_SetScale(65);
+
+    if (!bme.begin(0x76)) {
+        while (1);
+    }
+
+    delay(20000);
+
+    if (!sensor.init()) {
+    }
+}
+
+void loop() {
+    int quality = sensor.slope();
+    float grove_AQ_risk = 1;
+
+    if (quality == AirQualitySensor::FORCE_SIGNAL) {
+        grove_AQ_risk = 1.9;
+    } else if (quality == AirQualitySensor::HIGH_POLLUTION) {
+        grove_AQ_risk = 1.7;
+    } else if (quality == AirQualitySensor::LOW_POLLUTION) {
+        grove_AQ_risk = 1.4;
+    } else if (quality == AirQualitySensor::FRESH_AIR) {
+        grove_AQ_risk = 1.2;
+    }
+
+    // Grove Dust Sensor
+    duration = pulseIn(pin, LOW);
+    lowpulseoccupancy = lowpulseoccupancy + duration;
+    if ((millis() - starttime) >= sampletime_ms) {
+        ratio = lowpulseoccupancy / (sampletime_ms * 10.0);
+        concentration = 1.1 * pow(ratio, 3) - 3.8 * pow(ratio, 2) + 520 * ratio + 0.62;
+        lowpulseoccupancy = 0;
+        starttime = millis();
+    }
+
+    // MS1100
+    int ms1100_analog = analogRead(Aout);
+    int ms1100_digital = digitalRead(Dout);
+
+    // MQ-135
+    int mq135_value = analogRead(Aout);
+    int mq135_digital = digitalRead(Dout);
+
+    // BME280
+    float temperature = bme.readTemperature();
+    float pressure = bme.readPressure() / 100.0F;
+    float altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
+    float humidity = bme.readHumidity();
+
+    // Risk index calculations
+    float total_risk = (grove_AQ_risk + concentration + ms1100_analog + mq135_value + humidity) / 5;
+
+    // OLED Display code
+    OLED_1in5_rgb_Clear();
+    updateText("Grove AQ: " + String(grove_AQ_risk), cPtr);
+    Paint_DrawString_EN(10, 0, cPtr, &Font12, BLACK, getTextColor(grove_AQ_risk));
+    updateText("Dust Conc: " + String(concentration), cPtr);
+    Paint_DrawString_EN(10, 20, cPtr, &Font12, BLACK, getTextColor(concentration));
+    updateText("MS1100 A: " + String(ms1100_analog), cPtr);
+    Paint_DrawString_EN(10, 40, cPtr, &Font12, BLACK, getTextColor(ms1100_analog));
+    updateText("MQ-135: " + String(mq135_value), cPtr);
+    Paint_DrawString_EN(10, 60, cPtr, &Font12, BLACK, getTextColor(mq135_value));
+    updateText("Humidity: " + String(humidity) + "%", cPtr);
+    Paint_DrawString_EN(10, 80, cPtr, &Font12, BLACK, getTextColor(humidity));
+    updateText("RiskIndex: " + String(total_risk), cPtr);
+    Paint_DrawString_EN(10, 100, cPtr, &Font12, BLACK, getTextColor(total_risk));
+
+    delay(5000); // Add delay for readability
+    OLED_1in5_rgb_Clear();
+}
